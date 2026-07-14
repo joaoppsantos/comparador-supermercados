@@ -1,0 +1,7 @@
+- One adapter per supermarket under packages/providers, each implementing the StoreProvider interface and yielding zod-validated RawOffer objects. No cross-imports between adapters.
+- Nothing outside packages/providers may know how data was obtained (scraper vs. API vs. feed).
+- Domain logic (normalization, matching, ingestion, alerts) lives in packages/core — never in React components, API routes, or worker entrypoints. apps/web and apps/worker are thin shells over packages/core.
+- Database schema and migrations live in packages/db (Prisma). Prices are euro cents (integers).
+- Matching decisions are persisted (method + confidence on StoreOffer); re-scrapes never re-match known offers, only new ones.
+- PricePoint rows are written only on price change (append-only history).
+- Queue/scheduling concerns (BullMQ jobs, rate limits, retries) belong in apps/worker; job payloads are small IDs, not data blobs.

@@ -1,0 +1,6 @@
+- Prefer TypeScript strict mode.
+- Avoid `any`.
+- Small pure functions.
+- Early returns.
+- Async/await only.
+- Meaningful naming.
