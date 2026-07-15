@@ -1,0 +1,308 @@
+/* Palette tokens (validated with the dataviz palette validator, light + dark). */
+:root {
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.1);
+  --good: #006300;
+  --series-1: #2a78d6; /* continente */
+  --series-2: #1baf7a; /* pingo-doce */
+  --series-3: #eda100; /* auchan */
+  --series-4: #008300; /* lidl */
+  --series-5: #4a3aa7; /* el-corte-ingles */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.1);
+    --good: #0ca30c;
+    --series-1: #3987e5;
+    --series-2: #199e70;
+    --series-3: #c98500;
+    --series-4: #008300;
+    --series-5: #9085e9;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+a {
+  color: inherit;
+}
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 20px 64px;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+  margin-bottom: 28px;
+}
+.site-header .inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+}
+.site-header .brand {
+  font-weight: 700;
+  text-decoration: none;
+}
+.site-header nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+}
+.site-header nav a:hover {
+  color: var(--text-primary);
+}
+
+.search-form input[type='search'] {
+  width: 100%;
+  max-width: 480px;
+  padding: 10px 14px;
+  font-size: 16px;
+  border: 1px solid var(--baseline);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 14px 0;
+}
+.card h3 {
+  margin: 0 0 2px;
+  font-size: 16px;
+}
+.card h3 a {
+  text-decoration: none;
+}
+.card h3 a:hover {
+  text-decoration: underline;
+}
+.meta {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.muted {
+  color: var(--text-muted);
+}
+
+.price-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 14px;
+  background: var(--page);
+}
+.chip .price {
+  font-variant-numeric: tabular-nums;
+}
+.chip.cheapest {
+  border-color: var(--good);
+}
+.chip.cheapest .price {
+  color: var(--good);
+  font-weight: 600;
+}
+.chip .was {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  font-size: 12px;
+}
+.chip .unit {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.cat-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 13px;
+  text-decoration: none;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+.cat-chip:hover {
+  color: var(--text-primary);
+  border-color: var(--baseline);
+}
+.cat-chip.clear {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.cat-chip .muted {
+  font-size: 11px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.scoreboard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 16px;
+}
+.duel {
+  display: grid;
+  grid-template-columns: 110px 1fr 110px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+}
+.duel-name {
+  text-align: center;
+}
+.duel-name a {
+  text-decoration: none;
+}
+.duel-name a:hover {
+  text-decoration: underline;
+}
+.duel-name .meta {
+  display: block;
+  font-size: 12px;
+}
+.duel-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+.duel-price.right {
+  justify-content: flex-end;
+}
+.duel-price.win {
+  color: var(--good);
+  font-weight: 700;
+}
+form.wishlist {
+  margin: 0;
+  flex: none;
+}
+button.star {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 4px;
+}
+button.star[aria-pressed='true'] {
+  color: var(--text-primary);
+}
+button.star:hover {
+  color: var(--text-primary);
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 14px;
+}
+table.data th {
+  text-align: left;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--grid);
+}
+table.data td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--grid);
+  font-variant-numeric: tabular-nums;
+}
+table.data tr:last-child td {
+  border-bottom: none;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 6px 0 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.legend .item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-wrap {
+  overflow-x: auto;
+}
