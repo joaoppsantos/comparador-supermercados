@@ -18,8 +18,21 @@ export default async function RunsPage() {
     take: 50,
   })
 
+  // live progress for in-flight runs: offers staged so far
+  const runningIds = runs.filter((r) => r.status === 'RUNNING').map((r) => r.id)
+  const stagedByRun = new Map<number, number>()
+  if (runningIds.length > 0) {
+    const staged = await prisma.stagingOffer.groupBy({
+      by: ['runId'],
+      where: { runId: { in: runningIds } },
+      _count: true,
+    })
+    for (const s of staged) stagedByRun.set(s.runId, s._count)
+  }
+
   return (
     <>
+      {runningIds.length > 0 && <meta httpEquiv="refresh" content="20" />}
       <h1>Scrape runs</h1>
       <table className="data">
         <thead>
@@ -55,7 +68,15 @@ export default async function RunsPage() {
                     <div className="meta">{meta.suspectReasons.join('; ')}</div>
                   ) : null}
                 </td>
-                <td>{run.offersSeen}</td>
+                <td>
+                  {run.status === 'RUNNING' ? (
+                    <>
+                      {stagedByRun.get(run.id) ?? 0} <span className="muted">em curso…</span>
+                    </>
+                  ) : (
+                    run.offersSeen
+                  )}
+                </td>
                 <td>{run.offersChanged}</td>
                 <td>{run.newOffers}</td>
                 <td>{run.errorCount}</td>
