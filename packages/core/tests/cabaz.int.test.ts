@@ -87,6 +87,47 @@ describe('resolveCabaz', () => {
     expect(totals[storeB.id]).toEqual({ totalCents: 119 + 89, covered: 2 })
   })
 
+  it('a pinned anchor product wins even when a cheaper similar exists in its store', async () => {
+    const store = await prisma.store.create({ data: { slug: 'a', name: 'A' } })
+    const premium = await seedProduct('Arroz Agulha Cigala 1kg', 'Cigala', { value: 1, unit: 'kg' })
+    const cheap = await seedProduct('Arroz Agulha Bom 1kg', 'Bom', { value: 1, unit: 'kg' })
+    await seedOffer(store.id, premium.id, 'a-1', 189)
+    await seedOffer(store.id, cheap.id, 'a-2', 99)
+
+    const { rows } = await resolveCabaz(prisma, [
+      {
+        label: 'Arroz',
+        tokens: ['arroz', 'agulha'],
+        targetQty: { value: 1, unit: 'kg' },
+        anchorProductId: premium.id,
+      },
+    ])
+    expect(rows[0]!.cells[store.id]).toMatchObject({
+      productId: premium.id,
+      priceCents: 189,
+      sameProduct: true,
+    })
+  })
+
+  it('addCabazEntryForProduct derives label, tokens and size from the product', async () => {
+    const store = await prisma.store.create({ data: { slug: 'a', name: 'A' } })
+    const product = await seedProduct('Iogurte Grego Natural Oikos 4x110g', 'Oikos', {
+      value: 0.44,
+      unit: 'kg',
+    })
+    await seedOffer(store.id, product.id, 'a-1', 249)
+
+    const { addCabazEntryForProduct, getCabazItems } = await import('../src/index.js')
+    expect(await addCabazEntryForProduct(prisma, product.id)).toBe(true)
+
+    const items = await getCabazItems(prisma)
+    const added = items.find((i) => i.anchorProductId === product.id)
+    expect(added).toBeDefined()
+    expect(added!.tokens).toContain('grego')
+    expect(added!.tokens).not.toContain('oikos') // brand is not a token
+    expect(added!.targetQty).toEqual({ value: 0.44, unit: 'kg' })
+  })
+
   it('rejects candidates outside the target package size', async () => {
     const store = await prisma.store.create({ data: { slug: 'a', name: 'A' } })
     const mini = await seedProduct('Leite UHT Meio Gordo Serra 200ml', 'Serra', { value: 0.2, unit: 'l' })

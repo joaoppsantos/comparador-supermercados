@@ -225,6 +225,21 @@ main {
   cursor: pointer;
   font-weight: 600;
 }
+.cabaz-pick {
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--baseline);
+  border-radius: 7px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cabaz-pick:hover {
+  border-color: var(--good);
+  color: var(--good);
+}
 
 .scoreboard-row {
   display: flex;

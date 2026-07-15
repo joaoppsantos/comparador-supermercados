@@ -46,6 +46,7 @@ model Product {
   offers         StoreOffer[]
   listItems      ShoppingListItem[]
   alerts         PriceAlert[]
+  cabazEntries   CabazEntry[]
 
   @@index([normalizedName])
 }
@@ -160,6 +161,10 @@ model CabazEntry {
   tokens         String[] // all must appear in a product's normalizedName
   targetQtyValue Decimal?
   targetQtyUnit  String? // 'kg' | 'l' | 'un'
+  // when the entry was created by picking a product, that product is pinned
+  // as the anchor for resolution
+  productId      Int?
+  product        Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   position       Int      @default(0)
 }
 

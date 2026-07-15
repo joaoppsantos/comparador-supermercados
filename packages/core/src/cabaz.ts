@@ -7,6 +7,8 @@ export interface CabazItem {
   tokens: string[]
   /** Expected package size; candidates outside ±30% are rejected. */
   targetQty?: { value: number; unit: 'kg' | 'l' | 'un' }
+  /** Entry created by picking a concrete product: pin it as the anchor. */
+  anchorProductId?: number
 }
 
 /** Essential-goods basket (DECO-style), sized to typical reference formats. */
@@ -54,7 +56,65 @@ export async function getCabazItems(prisma: PrismaClient): Promise<StoredCabazIt
     ...(e.targetQtyValue !== null && e.targetQtyUnit !== null
       ? { targetQty: { value: Number(e.targetQtyValue), unit: e.targetQtyUnit as 'kg' | 'l' | 'un' } }
       : {}),
+    ...(e.productId !== null ? { anchorProductId: e.productId } : {}),
   }))
+}
+
+const VALID_UNITS = new Set(['kg', 'l', 'un'])
+
+/**
+ * Creates a basket entry from a picked product: label and search tokens come
+ * from the product, its package size (stated or inferred from unit price)
+ * becomes the target, and the product itself is pinned as anchor.
+ */
+export async function addCabazEntryForProduct(
+  prisma: PrismaClient,
+  productId: number,
+): Promise<boolean> {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      name: true,
+      brand: true,
+      normalizedName: true,
+      quantityValue: true,
+      quantityUnit: true,
+      offers: {
+        where: { available: true },
+        select: {
+          storeId: true,
+          currentPriceCents: true,
+          currentPromoPriceCents: true,
+          unitPriceCents: true,
+          unitPricePer: true,
+        },
+      },
+    },
+  })
+  if (!product) return false
+  const tokens = product.normalizedName.split(' ').filter(Boolean)
+  if (tokens.length === 0) return false
+
+  const qty = candidateQty(product)
+  const hasQty = qty !== null && VALID_UNITS.has(qty.unit)
+  const label =
+    product.brand && !product.name.toLowerCase().includes(product.brand.toLowerCase())
+      ? `${product.name} ${product.brand}`
+      : product.name
+
+  const last = await prisma.cabazEntry.aggregate({ _max: { position: true } })
+  await prisma.cabazEntry.create({
+    data: {
+      label,
+      tokens,
+      targetQtyValue: hasQty ? Math.round(qty.value * 1000) / 1000 : null,
+      targetQtyUnit: hasQty ? qty.unit : null,
+      productId: product.id,
+      position: (last._max.position ?? 0) + 1,
+    },
+  })
+  return true
 }
 
 export interface CabazCell {
@@ -159,23 +219,33 @@ export async function resolveCabaz(
       return best
     }
 
-    // anchor: the candidate sold in the most stores (tie: cheapest on average)
+    // anchor: a pinned product wins outright; otherwise the candidate sold in
+    // the most stores (tie: cheapest on average)
     let anchor: Candidate | null = null
     let anchorBest = new Map<number, number>()
-    for (const candidate of fitting) {
-      const best = bestPerStore(candidate)
-      const better =
-        !anchor ||
-        best.size > anchorBest.size ||
-        (best.size === anchorBest.size &&
-          [...best.values()].reduce((a, b) => a + b, 0) / best.size <
-            [...anchorBest.values()].reduce((a, b) => a + b, 0) / anchorBest.size)
-      if (better) {
-        anchor = candidate
-        anchorBest = best
+    const pinned = item.anchorProductId
+      ? (fitting.find((c) => c.id === item.anchorProductId) ?? null)
+      : null
+    if (pinned) {
+      anchor = pinned
+      anchorBest = bestPerStore(pinned)
+    } else {
+      for (const candidate of fitting) {
+        const best = bestPerStore(candidate)
+        const better =
+          !anchor ||
+          best.size > anchorBest.size ||
+          (best.size === anchorBest.size &&
+            [...best.values()].reduce((a, b) => a + b, 0) / best.size <
+              [...anchorBest.values()].reduce((a, b) => a + b, 0) / anchorBest.size)
+        if (better) {
+          anchor = candidate
+          anchorBest = best
+        }
       }
     }
-    const anchorIsShared = anchorBest.size >= 2
+    // a pinned anchor is used even when only one store sells it
+    const anchorIsShared = pinned !== null ? anchorBest.size >= 1 : anchorBest.size >= 2
 
     const cells: Record<number, CabazCell | null> = {}
     for (const store of stores) {

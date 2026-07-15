@@ -6,6 +6,7 @@ export { finalizeRun, evaluateRunSanity, runMetaSchema, type RunMeta } from './f
 export {
   resolveCabaz,
   getCabazItems,
+  addCabazEntryForProduct,
   DEFAULT_CABAZ,
   type CabazItem,
   type StoredCabazItem,

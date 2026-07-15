@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
+import { productSearchWhere } from '@/lib/productSearch'
 import { topCategories } from '@/lib/categories'
 import { getWishlistProductIds } from '@/lib/wishlist'
 import { distinctStoreCount, ProductCard } from '@/components/ProductCard'
@@ -15,30 +16,7 @@ export default async function SearchPage({
   const q = params.q?.trim() ?? ''
   const cat = params.cat?.trim() ?? ''
 
-  const textFilter = q
-    ? [
-        {
-          OR: [
-            { name: { contains: q, mode: 'insensitive' as const } },
-            { brand: { contains: q, mode: 'insensitive' as const } },
-            { ean: q },
-            // multi-word queries: every word must appear in name or brand
-            ...(q.includes(' ')
-              ? [
-                  {
-                    AND: q.split(/\s+/).map((word) => ({
-                      OR: [
-                        { name: { contains: word, mode: 'insensitive' as const } },
-                        { brand: { contains: word, mode: 'insensitive' as const } },
-                      ],
-                    })),
-                  },
-                ]
-              : []),
-          ],
-        },
-      ]
-    : []
+  const textFilter = q ? [productSearchWhere(q)] : []
   const categoryFilter = cat
     ? [{ offers: { some: { categoryPath: { contains: cat, mode: 'insensitive' as const } } } }]
     : []

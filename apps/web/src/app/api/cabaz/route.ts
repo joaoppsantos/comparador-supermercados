@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { addCabazEntryForProduct } from '@comparador/core'
 import { prisma } from '@/lib/db'
 
 const UNITS = new Set(['kg', 'l', 'un'])
@@ -6,6 +7,14 @@ const UNITS = new Set(['kg', 'l', 'un'])
 export async function POST(req: Request) {
   const form = await req.formData()
   const action = String(form.get('action') ?? 'add')
+
+  if (action === 'add-product') {
+    const productId = Number(form.get('productId'))
+    if (Number.isInteger(productId) && productId > 0) {
+      await addCabazEntryForProduct(prisma, productId)
+    }
+    return NextResponse.redirect(new URL('/cabaz', req.url), 303)
+  }
 
   if (action === 'remove') {
     const id = Number(form.get('id'))

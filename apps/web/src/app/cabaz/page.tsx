@@ -1,14 +1,29 @@
 import Link from 'next/link'
 import { getCabazItems, resolveCabaz } from '@comparador/core'
 import { prisma } from '@/lib/db'
-import { formatCents } from '@/lib/format'
+import { formatCents, formatQuantity } from '@/lib/format'
+import { productSearchWhere } from '@/lib/productSearch'
 import { storeColorVar } from '@/lib/storeColors'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CabazPage() {
+export default async function CabazPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const q = (await searchParams).q?.trim() ?? ''
   const items = await getCabazItems(prisma)
   const { stores, rows, totals } = await resolveCabaz(prisma, items)
+
+  const results = q
+    ? await prisma.product.findMany({
+        where: productSearchWhere(q),
+        include: { offers: { where: { available: true }, include: { store: true } } },
+        orderBy: { name: 'asc' },
+        take: 20,
+      })
+    : []
 
   const maxCovered = Math.max(...stores.map((s) => totals[s.id]?.covered ?? 0), 0)
   const winnerId = stores
@@ -113,28 +128,76 @@ export default async function CabazPage() {
         Totais só somam os produtos que cada loja tem — compara lojas com cobertura semelhante.
       </p>
 
-      <h2 style={{ marginTop: 30 }}>Adicionar produto ao cabaz</h2>
-      <form method="post" action="/api/cabaz" className="cabaz-add">
-        <input type="hidden" name="action" value="add" />
-        <input name="label" placeholder="Nome (ex.: Iogurte Grego 4x120g)" required />
-        <input
-          name="tokens"
-          placeholder="palavras a procurar (ex.: iogurte grego)"
-          required
-        />
-        <input name="qtyValue" placeholder="qtd (ex.: 0,48)" inputMode="decimal" size={8} />
-        <select name="qtyUnit" defaultValue="">
-          <option value="">sem tamanho</option>
-          <option value="kg">kg</option>
-          <option value="l">l</option>
-          <option value="un">un</option>
-        </select>
-        <button type="submit">Adicionar</button>
+      <h2 style={{ marginTop: 30 }} id="add">
+        Adicionar produto ao cabaz
+      </h2>
+      <form className="cabaz-add" action="/cabaz#add">
+        <input type="search" name="q" placeholder="procurar produto (ex.: iogurte grego)" defaultValue={q} />
+        <button type="submit">Procurar</button>
       </form>
-      <p className="meta">
-        As palavras têm de aparecer todas no nome do produto; o tamanho (±30%) evita comparar
-        embalagens diferentes.
-      </p>
+
+      {q && results.length === 0 && <p>Sem resultados para “{q}”.</p>}
+      {results.map((product) => {
+        const effective = (o: (typeof product.offers)[number]) =>
+          o.currentPromoPriceCents ?? o.currentPriceCents
+        return (
+          <div className="card duel" key={product.id} style={{ gridTemplateColumns: '1fr auto' }}>
+            <span>
+              <Link href={`/product/${product.id}`}>{product.name}</Link>
+              <div className="meta">
+                {[
+                  product.brand,
+                  product.quantityValue !== null && product.quantityUnit
+                    ? formatQuantity(Number(product.quantityValue), product.quantityUnit)
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </div>
+              <span className="price-chips">
+                {[...product.offers]
+                  .sort((a, b) => effective(a) - effective(b))
+                  .map((offer) => (
+                    <span key={offer.id} className="chip">
+                      <span className="dot" style={{ background: storeColorVar(offer.store.slug) }} />
+                      {formatCents(effective(offer))}
+                    </span>
+                  ))}
+              </span>
+            </span>
+            <form method="post" action="/api/cabaz">
+              <input type="hidden" name="action" value="add-product" />
+              <input type="hidden" name="productId" value={product.id} />
+              <button type="submit" className="cabaz-pick">
+                ＋ Adicionar
+              </button>
+            </form>
+          </div>
+        )
+      })}
+
+      <details style={{ marginTop: 18 }}>
+        <summary className="meta" style={{ cursor: 'pointer' }}>
+          Adicionar por regra (avançado)
+        </summary>
+        <form method="post" action="/api/cabaz" className="cabaz-add" style={{ marginTop: 10 }}>
+          <input type="hidden" name="action" value="add" />
+          <input name="label" placeholder="Nome (ex.: Iogurte Grego 4x120g)" required />
+          <input name="tokens" placeholder="palavras a procurar (ex.: iogurte grego)" required />
+          <input name="qtyValue" placeholder="qtd (ex.: 0,48)" inputMode="decimal" size={8} />
+          <select name="qtyUnit" defaultValue="">
+            <option value="">sem tamanho</option>
+            <option value="kg">kg</option>
+            <option value="l">l</option>
+            <option value="un">un</option>
+          </select>
+          <button type="submit">Adicionar</button>
+        </form>
+        <p className="meta">
+          As palavras têm de aparecer todas no nome do produto; o tamanho (±30%) evita comparar
+          embalagens diferentes.
+        </p>
+      </details>
     </>
   )
 }
