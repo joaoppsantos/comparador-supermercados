@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MatchMethod {
+  EAN
+  EXACT
+  FUZZY
+  AI
+  MANUAL
+  NEW // product was created from this offer
+}
+
+enum RunStatus {
+  RUNNING
+  OK
+  PARTIAL // some categories failed; ingested, but availability sweep skipped
+  FAILED
+  SUSPECT // failed sanity checks; staged data quarantined, not ingested
+}
+
+model Store {
+  id     Int          @id @default(autoincrement())
+  slug   String       @unique
+  name   String
+  offers StoreOffer[]
+  runs   ScrapeRun[]
+}
+
+// Canonical, store-agnostic product.
+model Product {
+  id             Int          @id @default(autoincrement())
+  ean            String?      @unique
+  brand          String?
+  name           String
+  normalizedName String
+  quantityValue  Decimal?
+  quantityUnit   String? // 'kg' | 'l' | 'un'
+  categoryId     Int?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+  offers         StoreOffer[]
+  listItems      ShoppingListItem[]
+  alerts         PriceAlert[]
+
+  @@index([normalizedName])
+}
+
+// This product at this store.
+model StoreOffer {
+  id                    Int          @id @default(autoincrement())
+  storeId               Int
+  store                 Store        @relation(fields: [storeId], references: [id])
+  productId             Int
+  product               Product      @relation(fields: [productId], references: [id])
+  externalId            String
+  url                   String
+  imageUrl              String?
+  categoryPath          String? // store's own taxonomy path, kept for future category mapping
+  available             Boolean
+  currentPriceCents     Int
+  currentPromoPriceCents Int?
+  currentPromoType      String?
+  unitPriceCents        Int? // as displayed by the store ("0,86€/lt")
+  unitPricePer          String? // 'kg' | 'l' | 'un'
+  lastSeenAt            DateTime
+  matchMethod           MatchMethod
+  matchConfidence       Float
+  priceHistory          PricePoint[]
+
+  @@unique([storeId, externalId])
+  @@index([productId])
+}
+
+// Append-only; a row is written only when the price (or promo) changes.
+model PricePoint {
+  id              Int        @id @default(autoincrement())
+  offerId         Int
+  offer           StoreOffer @relation(fields: [offerId], references: [id])
+  priceCents      Int
+  promoPriceCents Int?
+  promoType       String?
+  capturedAt      DateTime
+
+  @@index([offerId, capturedAt])
+}
+
+// Own canonical taxonomy (populated from phase 1 on).
+model Category {
+  id       Int        @id @default(autoincrement())
+  slug     String     @unique
+  name     String
+  parentId Int?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+  storeMaps StoreCategoryMap[]
+}
+
+model StoreCategoryMap {
+  storeId      Int
+  externalPath String
+  categoryId   Int
+  category     Category @relation(fields: [categoryId], references: [id])
+
+  @@id([storeId, externalPath])
+}
+
+model ScrapeRun {
+  id            Int            @id @default(autoincrement())
+  storeId       Int
+  store         Store          @relation(fields: [storeId], references: [id])
+  status        RunStatus      @default(RUNNING)
+  startedAt     DateTime       @default(now())
+  finishedAt    DateTime?
+  offersSeen    Int            @default(0)
+  offersChanged Int            @default(0)
+  newOffers     Int            @default(0)
+  errorCount    Int            @default(0)
+  meta          Json? // { planned: string[], bounded: boolean, maxPages?: number, suspectReasons?: string[] }
+  staging       StagingOffer[]
+}
+
+// Parsed offers land here first; ingestion into the real tables only happens
+// after the run passes sanity checks (quarantine on SUSPECT).
+model StagingOffer {
+  id         Int       @id @default(autoincrement())
+  runId      Int
+  run        ScrapeRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  externalId String
+  payload    Json // RawOffer as JSON
+
+  @@unique([runId, externalId])
+}
+
+// Phase 2 features — schema in place from day 1.
+model ShoppingList {
+  id    Int                @id @default(autoincrement())
+  name  String
+  items ShoppingListItem[]
+}
+
+model ShoppingListItem {
+  id        Int          @id @default(autoincrement())
+  listId    Int
+  list      ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product      @relation(fields: [productId], references: [id])
+  quantity  Int          @default(1)
+}
+
+model PriceAlert {
+  id               Int     @id @default(autoincrement())
+  productId        Int
+  product          Product @relation(fields: [productId], references: [id])
+  targetPriceCents Int? // null = alert on any price drop
+  active           Boolean @default(true)
+}
