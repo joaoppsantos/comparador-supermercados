@@ -17,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Comparador
             </Link>
             <nav style={{ display: 'flex', gap: 18 }}>
+              <Link href="/cabaz">Cabaz</Link>
               <Link href="/compare">Duelo</Link>
               <Link href="/wishlist">Wishlist</Link>
               <Link href="/admin/runs">Runs</Link>
