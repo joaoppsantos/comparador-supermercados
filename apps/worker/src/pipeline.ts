@@ -151,7 +151,9 @@ export function createPipeline() {
     const opts = { connection, concurrency: 1 }
     return [
       new Worker(QUEUE_STORE, processStoreJob, opts),
-      new Worker(QUEUE_CATEGORY, processCategoryJob, opts),
+      // categories from different stores run in parallel; politeFetch
+      // serializes per host, so per-store politeness is unaffected
+      new Worker(QUEUE_CATEGORY, processCategoryJob, { connection, concurrency: 3 }),
       new Worker(QUEUE_FINALIZE, processFinalizeJob, opts),
     ]
   }
