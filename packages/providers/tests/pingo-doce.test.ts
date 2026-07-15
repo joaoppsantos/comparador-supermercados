@@ -53,4 +53,19 @@ describe('parseGrid', () => {
     )
     expect(mimosa!.imageUrl).toContain('41043')
   })
+
+  it('includes store-only products (grid recorded without the onlineFlag filter)', () => {
+    // regression: the onlineFlag=true filter used to hide products sold only
+    // in physical stores, e.g. Água Penacova
+    const { offers, skipped } = parseGrid(fixture('grid-aguas.html'))
+    expect(skipped).toEqual([])
+    const penacova = offers.find((o) => o.externalId === '749441')
+    expect(penacova).toMatchObject({
+      rawName: 'Água sem Gás',
+      brand: 'Penacova',
+      quantity: { value: 5, unit: 'l' },
+      unitPrice: { cents: 21, per: 'l' },
+      priceCents: 105,
+    })
+  })
 })

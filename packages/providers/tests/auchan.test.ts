@@ -32,6 +32,12 @@ describe('parseCgid', () => {
     expect(parseCgid('...Search-UpdateGrid?cgid=alimentacao-&amp;prefn1=...')).toBe('alimentacao-')
     expect(parseCgid('<html>no grid here</html>')).toBeNull()
   })
+
+  it('keeps percent-encoded cgids intact (a truncated cgid silently returns the wrong grid)', () => {
+    expect(parseCgid('Search-UpdateGrid?cgid=aguas-t%C3%B3nicas-e-ginger-ale&amp;srule=x')).toBe(
+      'aguas-t%C3%B3nicas-e-ginger-ale',
+    )
+  })
 })
 
 describe('parseGrid', () => {

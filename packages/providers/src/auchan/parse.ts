@@ -51,9 +51,13 @@ export function parseSitemapCategories(xml: string): RawCategory[] {
   return categories
 }
 
-/** Extracts the cgid from a category page (present in its Search-UpdateGrid links). */
+/**
+ * Extracts the cgid from a category page (present in its Search-UpdateGrid
+ * links). cgids can contain percent-encoded characters ("aguas-t%C3%B3nicas");
+ * the value is returned as found, ready to be reused in a URL.
+ */
 export function parseCgid(categoryPageHtml: string): string | null {
-  const m = categoryPageHtml.match(/Search-UpdateGrid\?cgid=([a-zA-Z0-9_-]+)/)
+  const m = categoryPageHtml.match(/Search-UpdateGrid\?cgid=([^&"'\s\\]+)/)
   return m?.[1] ?? null
 }
 

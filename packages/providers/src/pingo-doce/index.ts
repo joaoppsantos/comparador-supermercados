@@ -45,7 +45,9 @@ export class PingoDoceProvider implements StoreProvider {
     const maxPages = Math.min(opts.maxPages ?? MAX_PAGES_SAFETY, MAX_PAGES_SAFETY)
 
     for (let page = 0; page < maxPages; page++) {
-      const url = `${GRID_URL}?cgid=${encodeURIComponent(category.externalId)}&pmin=0.04&prefn1=onlineFlag&prefv1=true&start=${page * PAGE_SIZE}&sz=${PAGE_SIZE}`
+      // No onlineFlag filter: it hides products sold only in physical stores
+      // (e.g. Água Penacova), which still carry full shelf prices.
+      const url = `${GRID_URL}?cgid=${encodeURIComponent(category.externalId)}&pmin=0.04&start=${page * PAGE_SIZE}&sz=${PAGE_SIZE}`
       const html = await this.fetchText(url)
       const { offers, tileCount, skipped } = parseGrid(html)
 

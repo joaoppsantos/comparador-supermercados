@@ -52,7 +52,9 @@ export class AuchanProvider implements StoreProvider {
     const maxPages = Math.min(opts.maxPages ?? MAX_PAGES_SAFETY, MAX_PAGES_SAFETY)
 
     for (let page = 0; page < maxPages; page++) {
-      const url = `${GRID_URL}?cgid=${encodeURIComponent(cgid)}&prefn1=soldInStores&prefv1=000&start=${page * PAGE_SIZE}&sz=${PAGE_SIZE}`
+      // cgid comes percent-encoded straight from the page (no re-encoding), and
+      // no soldInStores filter: it hides products not sold via the online store.
+      const url = `${GRID_URL}?cgid=${cgid}&start=${page * PAGE_SIZE}&sz=${PAGE_SIZE}`
       const html = await this.fetchText(url)
       const { offers, tileCount, skipped } = parseGrid(html)
 
