@@ -1,0 +1,12 @@
+{
+  "name": "@comparador/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@comparador/db": "workspace:*",
+    "@comparador/providers": "workspace:*",
+    "zod": "^4.0.0"
+  }
+}
