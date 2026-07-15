@@ -1,0 +1,24 @@
+{
+  "name": "comparador-supermercados",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:push": "pnpm --filter @comparador/db db:push",
+    "db:migrate": "pnpm --filter @comparador/db migrate:dev",
+    "worker": "pnpm --filter @comparador/worker start",
+    "scrape": "pnpm --filter @comparador/worker scrape",
+    "web": "pnpm --filter @comparador/web dev",
+    "web:build": "pnpm --filter @comparador/web build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
