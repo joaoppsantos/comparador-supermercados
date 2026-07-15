@@ -123,6 +123,8 @@ export interface CabazCell {
   priceCents: number
   /** True when this is the same canonical product chosen for the other stores. */
   sameProduct: boolean
+  /** True when the user picked this product for this store by hand. */
+  manual?: boolean
 }
 
 export interface ResolvedCabaz {
@@ -178,10 +180,31 @@ function fitsTarget(product: Candidate, target: CabazItem['targetQty']): boolean
  */
 export async function resolveCabaz(
   prisma: PrismaClient,
-  items: CabazItem[] = DEFAULT_CABAZ,
+  items: Array<CabazItem & { id?: number }> = DEFAULT_CABAZ,
 ): Promise<ResolvedCabaz> {
   const stores = await prisma.store.findMany({ orderBy: { slug: 'asc' } })
   const rows: ResolvedCabaz['rows'] = []
+
+  // manual per-store picks override whatever the automatic resolution finds
+  const entryIds = items.map((i) => i.id).filter((id): id is number => id !== undefined)
+  const choices = entryIds.length
+    ? await prisma.cabazEntryChoice.findMany({
+        where: { entryId: { in: entryIds } },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              offers: {
+                where: { available: true },
+                select: { storeId: true, currentPriceCents: true, currentPromoPriceCents: true },
+              },
+            },
+          },
+        },
+      })
+    : []
+  const choiceByEntryStore = new Map(choices.map((c) => [`${c.entryId}:${c.storeId}`, c]))
 
   for (const item of items) {
     const tokens = item.tokens.map((t) => stripAccents(t.toLowerCase()))
@@ -249,6 +272,22 @@ export async function resolveCabaz(
 
     const cells: Record<number, CabazCell | null> = {}
     for (const store of stores) {
+      const choice = item.id !== undefined ? choiceByEntryStore.get(`${item.id}:${store.id}`) : undefined
+      if (choice) {
+        const storeOffers = choice.product.offers.filter((o) => o.storeId === store.id)
+        if (storeOffers.length > 0) {
+          cells[store.id] = {
+            productId: choice.product.id,
+            productName: choice.product.name,
+            priceCents: Math.min(
+              ...storeOffers.map((o) => o.currentPromoPriceCents ?? o.currentPriceCents),
+            ),
+            sameProduct: true,
+            manual: true,
+          }
+          continue
+        }
+      }
       const anchorPrice = anchorBest.get(store.id)
       if (anchor && anchorIsShared && anchorPrice !== undefined) {
         cells[store.id] = {

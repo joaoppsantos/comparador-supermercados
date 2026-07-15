@@ -25,11 +25,12 @@ enum RunStatus {
 }
 
 model Store {
-  id     Int          @id @default(autoincrement())
-  slug   String       @unique
-  name   String
-  offers StoreOffer[]
-  runs   ScrapeRun[]
+  id           Int                @id @default(autoincrement())
+  slug         String             @unique
+  name         String
+  offers       StoreOffer[]
+  runs         ScrapeRun[]
+  cabazChoices CabazEntryChoice[]
 }
 
 // Canonical, store-agnostic product.
@@ -47,6 +48,7 @@ model Product {
   listItems      ShoppingListItem[]
   alerts         PriceAlert[]
   cabazEntries   CabazEntry[]
+  cabazChoices   CabazEntryChoice[]
 
   @@index([normalizedName])
 }
@@ -166,6 +168,19 @@ model CabazEntry {
   productId      Int?
   product        Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   position       Int      @default(0)
+  choices        CabazEntryChoice[]
+}
+
+// Manual per-store match: "for this basket entry, at this store, use this product."
+model CabazEntryChoice {
+  entryId   Int
+  entry     CabazEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  storeId   Int
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([entryId, storeId])
 }
 
 model PriceAlert {

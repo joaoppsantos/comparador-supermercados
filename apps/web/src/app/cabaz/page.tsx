@@ -34,9 +34,9 @@ export default async function CabazPage({
     <>
       <h1>Cabaz essencial</h1>
       <p className="meta">
-        {rows.length} produtos de base comparados loja a loja. ✓ = mesmo produto e marca em várias
-        lojas; ≈ = produto mais barato semelhante dessa loja; — = ainda sem dados (o catálogo cresce
-        a cada scrape noturno).
+        {rows.length} produtos de base comparados loja a loja. ✓ = mesmo produto e marca; ≈ =
+        semelhante mais barato dessa loja; ✓m = escolhido manualmente («trocar»/«escolher» em cada
+        célula); — = ainda sem dados (o catálogo cresce a cada scrape noturno).
       </p>
 
       <div className="chart-wrap">
@@ -68,10 +68,14 @@ export default async function CabazPage({
                   <td>{item.label}</td>
                   {stores.map((store) => {
                     const cell = cells[store.id]
+                    const matchHref = `/cabaz/match?entry=${entryId}&store=${store.id}`
                     if (!cell) {
                       return (
                         <td key={store.id} className="muted">
                           —
+                          <div className="meta">
+                            <Link href={matchHref}>escolher</Link>
+                          </div>
                         </td>
                       )
                     }
@@ -81,9 +85,15 @@ export default async function CabazPage({
                         style={cell.priceCents === cheapest ? { color: 'var(--good)', fontWeight: 600 } : undefined}
                       >
                         {formatCents(cell.priceCents)}{' '}
-                        <span className="muted">{cell.sameProduct ? '✓' : '≈'}</span>
+                        <span className="muted" title={cell.manual ? 'escolha manual' : cell.sameProduct ? 'mesmo produto' : 'semelhante'}>
+                          {cell.manual ? '✓m' : cell.sameProduct ? '✓' : '≈'}
+                        </span>
                         <div className="meta" style={{ fontWeight: 400 }}>
                           <Link href={`/product/${cell.productId}`}>{cell.productName}</Link>
+                          {' · '}
+                          <Link href={matchHref} className="muted">
+                            trocar
+                          </Link>
                         </div>
                       </td>
                     )

@@ -128,6 +128,31 @@ describe('resolveCabaz', () => {
     expect(added!.targetQty).toEqual({ value: 0.44, unit: 'kg' })
   })
 
+  it('a manual per-store choice overrides the automatic resolution', async () => {
+    const store = await prisma.store.create({ data: { slug: 'a', name: 'A' } })
+    const auto = await seedProduct('Iogurte Grego Natural Serra 4x110g', 'Serra', { value: 0.44, unit: 'kg' })
+    const picked = await seedProduct('Iogurte Grego Ligeiro Vale 4x115g', 'Vale', { value: 0.46, unit: 'kg' })
+    await seedOffer(store.id, auto.id, 'a-1', 149)
+    await seedOffer(store.id, picked.id, 'a-2', 199)
+
+    const entry = await prisma.cabazEntry.create({
+      data: { label: 'Iogurte Grego', tokens: ['iogurte', 'grego'], position: 0 },
+    })
+    await prisma.cabazEntryChoice.create({
+      data: { entryId: entry.id, storeId: store.id, productId: picked.id },
+    })
+
+    const { rows } = await resolveCabaz(prisma, [
+      { id: entry.id, label: 'Iogurte Grego', tokens: ['iogurte', 'grego'] },
+    ])
+    expect(rows[0]!.cells[store.id]).toMatchObject({
+      productId: picked.id,
+      priceCents: 199,
+      sameProduct: true,
+      manual: true,
+    })
+  })
+
   it('rejects candidates outside the target package size', async () => {
     const store = await prisma.store.create({ data: { slug: 'a', name: 'A' } })
     const mini = await seedProduct('Leite UHT Meio Gordo Serra 200ml', 'Serra', { value: 0.2, unit: 'l' })

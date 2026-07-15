@@ -16,6 +16,26 @@ export async function POST(req: Request) {
     return NextResponse.redirect(new URL('/cabaz', req.url), 303)
   }
 
+  if (action === 'choose' || action === 'unchoose') {
+    const entryId = Number(form.get('entryId'))
+    const storeId = Number(form.get('storeId'))
+    if (Number.isInteger(entryId) && Number.isInteger(storeId)) {
+      if (action === 'choose') {
+        const productId = Number(form.get('productId'))
+        if (Number.isInteger(productId) && productId > 0) {
+          await prisma.cabazEntryChoice.upsert({
+            where: { entryId_storeId: { entryId, storeId } },
+            create: { entryId, storeId, productId },
+            update: { productId },
+          })
+        }
+      } else {
+        await prisma.cabazEntryChoice.deleteMany({ where: { entryId, storeId } })
+      }
+    }
+    return NextResponse.redirect(new URL('/cabaz', req.url), 303)
+  }
+
   if (action === 'remove') {
     const id = Number(form.get('id'))
     if (Number.isInteger(id)) {
