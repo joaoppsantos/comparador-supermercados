@@ -80,25 +80,52 @@ export default async function CabazMatchPage({
         <p>Sem resultados para “{q}” em {store.name}.</p>
       )}
       {results.map((product) => {
-        const cents = Math.min(
-          ...product.offers.map((o) => o.currentPromoPriceCents ?? o.currentPriceCents),
-        )
+        const effective = (o: (typeof product.offers)[number]) =>
+          o.currentPromoPriceCents ?? o.currentPriceCents
+        const best = [...product.offers].sort((a, b) => effective(a) - effective(b))[0]!
+        const cents = effective(best)
+        // package size: stated on the product, else inferred from the unit price
+        const qty =
+          product.quantityValue !== null && product.quantityUnit
+            ? { value: Number(product.quantityValue), unit: product.quantityUnit }
+            : best.unitPriceCents !== null && best.unitPricePer !== null
+              ? { value: cents / best.unitPriceCents, unit: best.unitPricePer }
+              : null
         return (
-          <div className="card duel" key={product.id} style={{ gridTemplateColumns: '1fr auto auto' }}>
+          <div
+            className="card duel"
+            key={product.id}
+            style={{ gridTemplateColumns: '1fr auto auto auto' }}
+          >
             <span>
               <Link href={`/product/${product.id}`}>{product.name}</Link>
               <div className="meta">
                 {[
                   product.brand,
-                  product.quantityValue !== null && product.quantityUnit
-                    ? formatQuantity(Number(product.quantityValue), product.quantityUnit)
-                    : null,
+                  qty ? formatQuantity(Math.round(qty.value * 100) / 100, qty.unit) : null,
                 ]
                   .filter(Boolean)
                   .join(' · ')}
               </div>
             </span>
-            <span className="duel-price">{formatCents(cents)}</span>
+            <span style={{ textAlign: 'right' }}>
+              <span className="duel-price">{formatCents(cents)}</span>
+              {best.unitPriceCents !== null && (
+                <div className="meta">
+                  {formatCents(best.unitPriceCents)}/{best.unitPricePer}
+                </div>
+              )}
+            </span>
+            <a
+              className="cabaz-pick"
+              href={best.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`ver em ${store.name}`}
+              style={{ textDecoration: 'none' }}
+            >
+              ↗
+            </a>
             <form method="post" action="/api/cabaz">
               <input type="hidden" name="action" value="choose" />
               <input type="hidden" name="entryId" value={entryId} />
