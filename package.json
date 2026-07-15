@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:push": "pnpm --filter @comparador/db db:push",
