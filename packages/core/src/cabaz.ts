@@ -25,6 +25,38 @@ export const DEFAULT_CABAZ: CabazItem[] = [
   { label: 'Papel Higiénico', tokens: ['papel', 'higienico'] },
 ]
 
+export interface StoredCabazItem extends CabazItem {
+  id: number
+}
+
+/**
+ * The basket lives in the database so it is editable in the app; on first use
+ * it is seeded with the default essential basket.
+ */
+export async function getCabazItems(prisma: PrismaClient): Promise<StoredCabazItem[]> {
+  const count = await prisma.cabazEntry.count()
+  if (count === 0) {
+    await prisma.cabazEntry.createMany({
+      data: DEFAULT_CABAZ.map((item, i) => ({
+        label: item.label,
+        tokens: item.tokens,
+        targetQtyValue: item.targetQty?.value ?? null,
+        targetQtyUnit: item.targetQty?.unit ?? null,
+        position: i,
+      })),
+    })
+  }
+  const entries = await prisma.cabazEntry.findMany({ orderBy: [{ position: 'asc' }, { id: 'asc' }] })
+  return entries.map((e) => ({
+    id: e.id,
+    label: e.label,
+    tokens: e.tokens,
+    ...(e.targetQtyValue !== null && e.targetQtyUnit !== null
+      ? { targetQty: { value: Number(e.targetQtyValue), unit: e.targetQtyUnit as 'kg' | 'l' | 'un' } }
+      : {}),
+  }))
+}
+
 export interface CabazCell {
   productId: number
   productName: string

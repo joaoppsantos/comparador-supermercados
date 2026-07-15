@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { resolveCabaz } from '@comparador/core'
+import { getCabazItems, resolveCabaz } from '@comparador/core'
 import { prisma } from '@/lib/db'
 import { formatCents } from '@/lib/format'
 import { storeColorVar } from '@/lib/storeColors'
@@ -7,7 +7,8 @@ import { storeColorVar } from '@/lib/storeColors'
 export const dynamic = 'force-dynamic'
 
 export default async function CabazPage() {
-  const { stores, rows, totals } = await resolveCabaz(prisma)
+  const items = await getCabazItems(prisma)
+  const { stores, rows, totals } = await resolveCabaz(prisma, items)
 
   const maxCovered = Math.max(...stores.map((s) => totals[s.id]?.covered ?? 0), 0)
   const winnerId = stores
@@ -37,16 +38,18 @@ export default async function CabazPage() {
                   {store.name}
                 </th>
               ))}
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ item, cells }) => {
+            {rows.map(({ item, cells }, rowIndex) => {
               const prices = stores
                 .map((s) => cells[s.id]?.priceCents)
                 .filter((p): p is number => typeof p === 'number')
               const cheapest = prices.length ? Math.min(...prices) : null
+              const entryId = items[rowIndex]!.id
               return (
-                <tr key={item.label}>
+                <tr key={entryId}>
                   <td>{item.label}</td>
                   {stores.map((store) => {
                     const cell = cells[store.id]
@@ -70,6 +73,15 @@ export default async function CabazPage() {
                       </td>
                     )
                   })}
+                  <td>
+                    <form method="post" action="/api/cabaz" className="wishlist">
+                      <input type="hidden" name="action" value="remove" />
+                      <input type="hidden" name="id" value={entryId} />
+                      <button className="star" title="Remover do cabaz">
+                        ✕
+                      </button>
+                    </form>
+                  </td>
                 </tr>
               )
             })}
@@ -92,12 +104,36 @@ export default async function CabazPage() {
                   </td>
                 )
               })}
+              <td></td>
             </tr>
           </tfoot>
         </table>
       </div>
       <p className="meta">
         Totais só somam os produtos que cada loja tem — compara lojas com cobertura semelhante.
+      </p>
+
+      <h2 style={{ marginTop: 30 }}>Adicionar produto ao cabaz</h2>
+      <form method="post" action="/api/cabaz" className="cabaz-add">
+        <input type="hidden" name="action" value="add" />
+        <input name="label" placeholder="Nome (ex.: Iogurte Grego 4x120g)" required />
+        <input
+          name="tokens"
+          placeholder="palavras a procurar (ex.: iogurte grego)"
+          required
+        />
+        <input name="qtyValue" placeholder="qtd (ex.: 0,48)" inputMode="decimal" size={8} />
+        <select name="qtyUnit" defaultValue="">
+          <option value="">sem tamanho</option>
+          <option value="kg">kg</option>
+          <option value="l">l</option>
+          <option value="un">un</option>
+        </select>
+        <button type="submit">Adicionar</button>
+      </form>
+      <p className="meta">
+        As palavras têm de aparecer todas no nome do produto; o tamanho (±30%) evita comparar
+        embalagens diferentes.
       </p>
     </>
   )

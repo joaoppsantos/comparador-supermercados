@@ -201,6 +201,31 @@ main {
   gap: 10px;
 }
 
+.cabaz-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.cabaz-add input,
+.cabaz-add select,
+.cabaz-add button {
+  padding: 7px 10px;
+  font-size: 14px;
+  border: 1px solid var(--baseline);
+  border-radius: 7px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+.cabaz-add input[name='label'],
+.cabaz-add input[name='tokens'] {
+  min-width: 230px;
+}
+.cabaz-add button {
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .scoreboard-row {
   display: flex;
   justify-content: space-between;
