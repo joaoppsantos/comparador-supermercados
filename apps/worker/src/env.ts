@@ -21,4 +21,6 @@ export const env = {
   redisUrl: process.env.REDIS_URL ?? 'redis://127.0.0.1:6379',
   scrapeMinIntervalMs: Number(process.env.SCRAPE_MIN_INTERVAL_MS ?? 1_000),
   logLevel: process.env.LOG_LEVEL ?? 'info',
+  /** Set SCHEDULE_NIGHTLY=0 to consume queues without registering nightly scrapes. */
+  scheduleNightly: process.env.SCHEDULE_NIGHTLY !== '0',
 }

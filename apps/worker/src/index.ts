@@ -1,3 +1,4 @@
+import { env } from './env.js'
 import { createPipeline } from './pipeline.js'
 import { logger } from './logger.js'
 
@@ -6,20 +7,25 @@ const pipeline = createPipeline()
 const workers = pipeline.startWorkers()
 
 // Staggered nightly full scrapes (one scheduler entry per store).
-const NIGHTLY: Array<[slug: string, cron: string]> = [
-  ['continente', '0 2 * * *'],
-  ['auchan', '30 3 * * *'],
-  ['pingo-doce', '0 5 * * *'],
-]
-for (const [storeSlug, pattern] of NIGHTLY) {
-  await pipeline.storeQueue.upsertJobScheduler(
-    `nightly-${storeSlug}`,
-    { pattern, tz: 'Europe/Lisbon' },
-    { name: 'scrape-store', data: { storeSlug } },
-  )
+if (env.scheduleNightly) {
+  const NIGHTLY: Array<[slug: string, cron: string]> = [
+    ['continente', '0 2 * * *'],
+    ['auchan', '30 3 * * *'],
+    ['pingo-doce', '0 5 * * *'],
+  ]
+  for (const [storeSlug, pattern] of NIGHTLY) {
+    await pipeline.storeQueue.upsertJobScheduler(
+      `nightly-${storeSlug}`,
+      { pattern, tz: 'Europe/Lisbon' },
+      { name: 'scrape-store', data: { storeSlug } },
+    )
+  }
 }
 
-logger.info('worker up: queues consuming, nightly schedule registered')
+logger.info(
+  { nightly: env.scheduleNightly },
+  'worker up: consuming queues (pending runs resume automatically)',
+)
 
 async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting down')
