@@ -11,8 +11,13 @@ export interface CabazItem {
   anchorProductId?: number
 }
 
-/** Essential-goods basket (DECO-style), sized to typical reference formats. */
+/**
+ * A realistic weekly shopping basket for a household, not just DECO-style dry
+ * staples: fresh produce, meat/fish, more dairy, drinks, cleaning and hygiene
+ * are included alongside the pantry essentials.
+ */
 export const DEFAULT_CABAZ: CabazItem[] = [
+  // Mercearia / pantry
   { label: 'Leite UHT Meio Gordo 1 L', tokens: ['leite', 'uht', 'meio', 'gordo'], targetQty: { value: 1, unit: 'l' } },
   { label: 'Ovos (dúzia)', tokens: ['ovos'], targetQty: { value: 12, unit: 'un' } },
   { label: 'Arroz Agulha 1 kg', tokens: ['arroz', 'agulha'], targetQty: { value: 1, unit: 'kg' } },
@@ -21,10 +26,34 @@ export const DEFAULT_CABAZ: CabazItem[] = [
   { label: 'Farinha de Trigo 1 kg', tokens: ['farinha', 'trigo'], targetQty: { value: 1, unit: 'kg' } },
   { label: 'Azeite Virgem Extra 750 ml', tokens: ['azeite', 'virgem', 'extra'], targetQty: { value: 0.75, unit: 'l' } },
   { label: 'Atum em Óleo (lata)', tokens: ['atum', 'oleo'], targetQty: { value: 0.11, unit: 'kg' } },
+  { label: 'Feijão Cozido (lata)', tokens: ['feijao', 'cozido'], targetQty: { value: 0.4, unit: 'kg' } },
+  { label: 'Ervilhas (lata)', tokens: ['ervilhas'], targetQty: { value: 0.4, unit: 'kg' } },
+  { label: 'Cereais de Pequeno-Almoço', tokens: ['cereais'], targetQty: { value: 0.375, unit: 'kg' } },
+  { label: 'Bolachas Maria', tokens: ['bolachas', 'maria'], targetQty: { value: 0.2, unit: 'kg' } },
+  // Frescos / fresh produce, meat & fish
+  { label: 'Batata', tokens: ['batata'], targetQty: { value: 2.5, unit: 'kg' } },
+  { label: 'Cebola', tokens: ['cebola'], targetQty: { value: 1, unit: 'kg' } },
+  { label: 'Tomate', tokens: ['tomate'], targetQty: { value: 1, unit: 'kg' } },
+  { label: 'Maçã', tokens: ['maca'], targetQty: { value: 1, unit: 'kg' } },
+  { label: 'Banana', tokens: ['banana'], targetQty: { value: 1, unit: 'kg' } },
+  { label: 'Peito de Frango', tokens: ['peito', 'frango'], targetQty: { value: 1, unit: 'kg' } },
+  { label: 'Carne Picada de Vaca', tokens: ['carne', 'picada', 'vaca'], targetQty: { value: 0.4, unit: 'kg' } },
+  // Laticínios / dairy
   { label: 'Manteiga 250 g', tokens: ['manteiga'], targetQty: { value: 0.25, unit: 'kg' } },
+  { label: 'Iogurte Natural (pack 4)', tokens: ['iogurte', 'natural'], targetQty: { value: 0.5, unit: 'kg' } },
+  { label: 'Queijo Flamengo Fatiado', tokens: ['queijo', 'flamengo', 'fatiado'], targetQty: { value: 0.15, unit: 'kg' } },
+  { label: 'Pão de Forma', tokens: ['pao', 'forma'], targetQty: { value: 0.5, unit: 'kg' } },
+  // Bebidas / drinks
   { label: 'Café Moído 250 g', tokens: ['cafe', 'moido'], targetQty: { value: 0.25, unit: 'kg' } },
   { label: 'Água sem Gás (garrafão 5–7 L)', tokens: ['agua', 'sem', 'gas'], targetQty: { value: 5.4, unit: 'l' } },
+  { label: 'Sumo de Laranja', tokens: ['sumo', 'laranja'], targetQty: { value: 1, unit: 'l' } },
+  { label: 'Refrigerante Cola 1,5 L', tokens: ['refrigerante', 'cola'], targetQty: { value: 1.5, unit: 'l' } },
+  // Limpeza e higiene / cleaning & hygiene
   { label: 'Papel Higiénico', tokens: ['papel', 'higienico'] },
+  { label: 'Detergente da Loiça', tokens: ['detergente', 'loica'] },
+  { label: 'Detergente para a Roupa', tokens: ['detergente', 'roupa'] },
+  { label: 'Gel de Banho', tokens: ['gel', 'banho'] },
+  { label: 'Pasta de Dentes', tokens: ['pasta', 'dentes'] },
 ]
 
 export interface StoredCabazItem extends CabazItem {
@@ -32,19 +61,24 @@ export interface StoredCabazItem extends CabazItem {
 }
 
 /**
- * The basket lives in the database so it is editable in the app; on first use
- * it is seeded with the default essential basket.
+ * The basket lives in the database so it is editable in the app. Any default
+ * item whose label isn't present yet gets added (additive), so extending
+ * DEFAULT_CABAZ fills in new entries without touching what the user already
+ * customized (manual picks, removed items, added products).
  */
 export async function getCabazItems(prisma: PrismaClient): Promise<StoredCabazItem[]> {
-  const count = await prisma.cabazEntry.count()
-  if (count === 0) {
+  const existing = await prisma.cabazEntry.findMany({ select: { label: true, position: true } })
+  const existingLabels = new Set(existing.map((e) => e.label))
+  const missing = DEFAULT_CABAZ.filter((item) => !existingLabels.has(item.label))
+  if (missing.length > 0) {
+    const nextPosition = existing.reduce((max, e) => Math.max(max, e.position), -1) + 1
     await prisma.cabazEntry.createMany({
-      data: DEFAULT_CABAZ.map((item, i) => ({
+      data: missing.map((item, i) => ({
         label: item.label,
         tokens: item.tokens,
         targetQtyValue: item.targetQty?.value ?? null,
         targetQtyUnit: item.targetQty?.unit ?? null,
-        position: i,
+        position: nextPosition + i,
       })),
     })
   }
